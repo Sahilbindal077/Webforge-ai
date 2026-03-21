@@ -1,4 +1,8 @@
-# WebForge AI Backend
+# Webforge-ai
+
+AI Agent that builds websites from natural language prompts
+
+## Backend Service
 
 The backend service for WebForge AI, providing APIs to generate and manage web projects using Generative AI. 
 
