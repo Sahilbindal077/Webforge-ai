@@ -4,7 +4,7 @@ import PreviewPanel from './PreviewPanel';
 import GeneratorButton from './GeneratorButton';
 import { motion } from 'framer-motion';
 
-export default function Workspace({ initialPrompt }) {
+export default function Workspace({ initialPrompt, projectId, initialFiles }) {
   const [currentPrompt, setCurrentPrompt] = useState(initialPrompt);
   const [messages, setMessages] = useState([
     { role: 'user', content: initialPrompt },
@@ -12,25 +12,45 @@ export default function Workspace({ initialPrompt }) {
   ]);
   const [draftPrompt, setDraftPrompt] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [files, setFiles] = useState(initialFiles);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!draftPrompt.trim()) return;
     
-    setMessages([...messages, { role: 'user', content: draftPrompt }]);
+    const currentDraft = draftPrompt;
+    setMessages(prev => [...prev, { role: 'user', content: currentDraft }]);
     setDraftPrompt("");
-    setCurrentPrompt(draftPrompt);
+    setCurrentPrompt(currentDraft);
     setIsUpdating(true);
     
-    // Simulate updating
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'I have updated the design. How does it look now?' }]);
-      setIsUpdating(false);
-    }, 2000);
+    try {
+      const response = await fetch(`http://localhost:3000/api/projects/${projectId}/prompt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: currentDraft }),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        setFiles(JSON.parse(data.files));
+        setMessages(prev => [...prev, { role: 'assistant', content: 'I have updated the design. How does it look now?' }]);
+      } else {
+        console.error('Update failed:', data.error);
+        setMessages(prev => [...prev, { role: 'assistant', content: 'There was an error updating the design.' }]);
+      }
+    } catch (error) {
+      console.error('Update request failed:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'There was an error connecting to the server.' }]);
+    }
+    
+    setIsUpdating(false);
   };
 
   const handleKeyDown = (e) => {
@@ -114,7 +134,7 @@ export default function Workspace({ initialPrompt }) {
 
       {/* Right Panel: Preview Area */}
       <div className="flex-1 h-[600px] lg:h-[calc(100vh-120px)] lg:min-w-0">
-        <PreviewPanel />
+        <PreviewPanel files={files} projectId={projectId} />
       </div>
 
     </motion.div>

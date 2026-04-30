@@ -8,15 +8,35 @@ import Workspace from './components/Workspace';
 function App() {
   const [appState, setAppState] = useState('idle'); // idle -> generating -> generated
   const [initialPrompt, setInitialPrompt] = useState('');
+  const [projectId, setProjectId] = useState(null);
+  const [projectFiles, setProjectFiles] = useState(null);
 
-  const handleGenerate = (prompt) => {
+  const handleGenerate = async (prompt) => {
     setInitialPrompt(prompt);
     setAppState('generating');
     
-    // Simulate generation time
-    setTimeout(() => {
-      setAppState('generated');
-    }, 4000);
+    try {
+      const response = await fetch('http://localhost:3000/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        setProjectId(data.id);
+        setProjectFiles(JSON.parse(data.files));
+        setAppState('generated');
+      } else {
+        console.error('Generation failed:', data.error);
+        setAppState('idle');
+      }
+    } catch (error) {
+      console.error('Request failed:', error);
+      setAppState('idle');
+    }
   };
 
   return (
@@ -71,7 +91,7 @@ function App() {
               transition={{ duration: 0.6 }}
               className="h-full w-full"
             >
-              <Workspace initialPrompt={initialPrompt} />
+              <Workspace initialPrompt={initialPrompt} projectId={projectId} initialFiles={projectFiles} />
             </motion.div>
           )}
           

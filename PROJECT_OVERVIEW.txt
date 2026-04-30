@@ -1,0 +1,321 @@
+================================================================================
+                         WEBFORGE AI - PROJECT OVERVIEW
+================================================================================
+
+PROJECT NAME   : WebForge AI
+TYPE           : AI-Powered Website Generator
+REPOSITORY     : Sahilbindal077/Webforge-ai
+LAST UPDATED   : April 2026
+
+--------------------------------------------------------------------------------
+1. WHAT IS WEBFORGE AI?
+--------------------------------------------------------------------------------
+
+WebForge AI is a full-stack web application that lets users generate complete,
+production-ready websites using natural language prompts (plain English). A user
+simply types something like "Build me a portfolio website for a photographer"
+and the app uses a powerful AI model to instantly generate a full website with
+HTML, CSS, and JavaScript — which is then previewed live inside the browser.
+
+The user can also REFINE the generated website further by typing follow-up
+instructions (e.g., "Make the hero section bigger" or "Add a dark mode toggle").
+Once happy, they can DOWNLOAD the entire website as a ZIP file.
+
+In short: Type a prompt → Get a working website → Refine it → Download it.
+
+--------------------------------------------------------------------------------
+2. HOW THE PROJECT WORKS (Step-by-Step Flow)
+--------------------------------------------------------------------------------
+
+STEP 1 — User enters a prompt
+  The user lands on the WebForge AI frontend (React app) and is presented with
+  a large, elegant prompt input box. They describe the website they want.
+
+STEP 2 — Frontend sends request to Backend
+  On clicking "Generate", the React frontend sends an HTTP POST request to the
+  backend API endpoint: POST http://localhost:3000/api/projects
+  The request body contains: { "prompt": "user's description here" }
+
+STEP 3 — Backend receives the prompt
+  The Express.js server receives the request. The Project Controller validates
+  the input and passes it to the Project Service layer.
+
+STEP 4 — AI generates the website
+  The Project Service calls the AI Service, which connects to the Groq API
+  (using the OpenAI-compatible SDK). It sends the user's prompt along with a
+  detailed system prompt that instructs the AI model to generate a full website
+  as a JSON object containing three files:
+    - index.html   (full semantic HTML5 page)
+    - styles.css   (world-class CSS with dark mode, glassmorphism, animations)
+    - main.js      (scroll animations, navbar effects, smooth scroll, etc.)
+
+STEP 5 — AI response is parsed and stored
+  The backend receives the AI-generated JSON, parses and validates it, then
+  saves the project (prompt history + generated files) to a local SQLite
+  database using Prisma ORM. A unique project ID is assigned.
+
+STEP 6 — Response sent back to frontend
+  The backend responds with the newly created project object including its ID
+  and generated file contents (as a JSON string).
+
+STEP 7 — Live preview rendered
+  The React frontend parses the files and renders a live preview inside an
+  <iframe> using the Blob URL technique — the generated HTML, CSS, and JS are
+  combined and rendered directly in the browser without any server round-trip.
+
+STEP 8 — User can refine the website
+  The user can type a follow-up instruction in the workspace chat. The frontend
+  sends a PATCH request to: PATCH http://localhost:3000/api/projects/:id/refine
+  The backend fetches the existing project, appends the new prompt to the chat
+  history, and asks the AI to refine the website while keeping the design system
+  intact. The updated files are saved and returned to the frontend.
+
+STEP 9 — Download as ZIP
+  The user can click "Download" which hits: GET /api/projects/:id/download
+  The backend uses the Archiver library to zip all three file assets and streams
+  the ZIP directly to the browser for download.
+
+--------------------------------------------------------------------------------
+3. PROJECT STRUCTURE
+--------------------------------------------------------------------------------
+
+project/
+├── backend/                   ← Node.js / Express / TypeScript API
+│   ├── prisma/
+│   │   ├── schema.prisma      ← Database schema definition
+│   │   └── dev.db             ← Local SQLite database file
+│   ├── src/
+│   │   ├── index.ts           ← Server entry point (Express app setup)
+│   │   ├── routes/
+│   │   │   └── project.route.ts   ← API route definitions
+│   │   ├── controllers/
+│   │   │   └── project.controller.ts  ← Request/response handling
+│   │   └── services/
+│   │       ├── ai.service.ts      ← Groq API integration + prompt engineering
+│   │       └── project.service.ts ← Business logic, DB operations
+│   ├── .env                   ← Environment variables (GROQ_API_KEY, DATABASE_URL)
+│   ├── package.json
+│   └── tsconfig.json
+│
+└── frontend/                  ← React + Vite + TailwindCSS UI
+    ├── src/
+    │   ├── App.jsx            ← Root component, app state management
+    │   ├── main.jsx           ← React entry point
+    │   ├── components/
+    │   │   ├── Navbar.jsx         ← Top navigation bar
+    │   │   ├── PromptBox.jsx      ← Initial prompt input UI
+    │   │   ├── SuggestionChips.jsx ← Quick-prompt suggestion buttons
+    │   │   ├── GeneratorButton.jsx ← Animated generate button
+    │   │   ├── Loader.jsx         ← Loading animation during generation
+    │   │   ├── Workspace.jsx      ← Split-pane editor + chat + preview
+    │   │   └── PreviewPanel.jsx   ← Live iframe renderer for generated site
+    │   └── index.css
+    ├── index.html
+    └── package.json
+
+--------------------------------------------------------------------------------
+4. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+
+FRONTEND:
+  - React 19             → UI library for building the interface
+  - Vite 8               → Blazing-fast build tool and dev server
+  - TailwindCSS 4        → Utility-first CSS for rapid, consistent styling
+  - Framer Motion 12     → Smooth animations and page transitions
+  - Lucide React         → Clean, consistent icon library
+  - Clsx + Tailwind Merge → Conditional class name utilities
+
+BACKEND:
+  - Node.js              → JavaScript runtime for the server
+  - Express 5            → HTTP server and API routing framework
+  - TypeScript 5         → Typed superset of JS for safe, maintainable code
+  - ts-node              → Runs TypeScript directly without compiling first
+  - Nodemon              → Auto-restarts server on file changes during dev
+  - Dotenv               → Loads environment variables from .env file
+  - CORS                 → Allows the frontend (different port) to call the API
+  - Archiver             → Creates ZIP archives for website download
+
+DATABASE:
+  - SQLite               → Lightweight, file-based SQL database (no setup needed)
+  - Prisma ORM 5         → Type-safe database client and migration tool
+    Uses the "Project" model with fields:
+      id             - unique UUID
+      createdAt      - timestamp when project was created
+      updatedAt      - timestamp of last update
+      promptHistory  - JSON string of the full conversation history
+      files          - JSON string of { "index.html": "...", "styles.css": "...", "main.js": "..." }
+
+AI / EXTERNAL SERVICES:
+  - Groq API             → Fast LLM inference provider (OpenAI-compatible REST API)
+  - LLM Model: llama-3.3-70b-versatile (Meta's LLaMA 3.3, 70B parameters)
+  - OpenAI SDK           → Used as the HTTP client to call the Groq API endpoint,
+                           since Groq follows the exact same API spec as OpenAI
+
+--------------------------------------------------------------------------------
+5. AI MODEL — WHY WE USE WHAT WE USE
+--------------------------------------------------------------------------------
+
+MODEL: llama-3.3-70b-versatile (via Groq)
+-----------------------------------------------
+  WHY THIS MODEL:
+  - LLaMA 3.3 70B is one of the most capable open-source large language models
+    available. With 70 billion parameters it produces high-quality, structured
+    code output (HTML/CSS/JS) reliably.
+  - The "versatile" variant is optimized for instruction-following tasks like
+    code generation, making it perfect for this use case.
+
+  WHY GROQ (instead of OpenAI directly):
+  - Groq provides extremely fast LLM inference using custom hardware (LPUs).
+  - Response times are often 5-10x faster than standard providers for the same
+    model size. This means the website generates in seconds, not minutes.
+  - Groq's API is 100% compatible with the OpenAI API format, so we can use
+    the official OpenAI Node.js SDK just by changing the baseURL and API key.
+  - It's also cost-effective with a generous free tier for development.
+
+  WHY OPENAI SDK (as the HTTP client):
+  - Instead of writing raw HTTP fetch calls, the OpenAI SDK provides a clean,
+    typed interface for chat completions.
+  - Groq explicitly supports the OpenAI SDK — you just point it at Groq's
+    baseURL: https://api.groq.com/openai/v1
+
+PROMPT ENGINEERING:
+  The system prompt (GENERATE_SYSTEM_PROMPT) is a carefully crafted set of
+  instructions that tells the AI exactly what to produce:
+  - Return ONLY a JSON object (no markdown, no explanations).
+  - The JSON must have a "files" key with three entries: index.html, styles.css, main.js.
+  - The CSS must follow a complete dark-mode design system with CSS variables,
+    glassmorphism cards, gradient text, keyframe animations, and responsive design.
+  - The HTML must use semantic HTML5 with full sections (hero, features, about, footer).
+  - The JS must include IntersectionObserver scroll animations, navbar scroll effects,
+    smooth scrolling, and mobile menu support.
+
+  For REFINEMENT, a separate, shorter REFINE_SYSTEM_PROMPT is used which tells
+  the AI to keep the design system intact while applying the user's change request.
+
+OUTPUT PARSING:
+  The AI sometimes wraps JSON in markdown code fences (```json ... ```). The
+  extractJSON() utility function attempts three strategies:
+    1. Parse the raw string directly as JSON.
+    2. Strip markdown fences and try again.
+    3. Use a regular expression to find the first { ... } block and parse that.
+
+--------------------------------------------------------------------------------
+6. API ENDPOINTS
+--------------------------------------------------------------------------------
+
+  POST   /api/projects              → Generate a new website from a prompt
+  GET    /api/projects/:id          → Fetch an existing project by ID
+  PATCH  /api/projects/:id/refine   → Refine an existing project with a new prompt
+  GET    /api/projects/:id/download → Download the project as a ZIP file
+  GET    /health                    → Health check (returns server status)
+
+--------------------------------------------------------------------------------
+7. WHY WE CHOSE EACH LIBRARY / TOOL
+--------------------------------------------------------------------------------
+
+  React 19
+    → Industry-standard UI library. Component-based architecture makes the
+      complex multi-state UI (idle → generating → workspace) easy to manage.
+
+  Vite
+    → Extremely fast dev server with HMR (Hot Module Replacement). Much faster
+      than Create React App. Native ES module support.
+
+  TailwindCSS 4
+    → Utility classes speed up styling enormously. Consistent design tokens
+      ensure the UI looks polished without writing custom CSS for every element.
+
+  Framer Motion
+    → Provides beautiful AnimatePresence transitions between idle/generating/
+      generated states, making the app feel premium and professional.
+
+  Lucide React
+    → Lightweight, consistent SVG icon library. Tree-shakeable (only bundles
+      the icons you actually use).
+
+  Express 5
+    → Minimal, flexible Node.js framework. Perfect for building REST APIs
+      quickly. v5 has improved async error handling.
+
+  TypeScript (Backend)
+    → Adds static types to catch bugs at compile time. Prisma generates fully
+      typed DB client, and Express types make handler signatures safe.
+
+  Prisma ORM
+    → Type-safe database client. Auto-generates TypeScript types from schema.
+      Migrations are simple. SQLite requires zero infrastructure setup — the
+      database is just a single .db file on disk.
+
+  SQLite
+    → Zero-configuration database. No separate DB server to run. The dev.db
+      file is created automatically on first migration. Perfect for local
+      development and small-scale deployments.
+
+  Archiver
+    → Streams a ZIP archive directly into the HTTP response. Memory-efficient
+      because it doesn't buffer the whole ZIP in RAM before sending.
+
+  Nodemon
+    → Watches for file changes and auto-restarts the TypeScript server. 
+      Configured to ignore .db and .db-journal files to avoid unnecessary 
+      restarts when the database is written to.
+
+  Dotenv
+    → Loads GROQ_API_KEY and DATABASE_URL from the .env file into process.env
+      at runtime, keeping secrets out of source code.
+
+  CORS
+    → The frontend runs on port 5173 (Vite) and the backend on port 3000.
+      CORS middleware allows the browser to make cross-origin API requests.
+
+--------------------------------------------------------------------------------
+8. ENVIRONMENT VARIABLES (.env)
+--------------------------------------------------------------------------------
+
+  Located at: backend/.env
+
+  Required variables:
+    GROQ_API_KEY    → Your Groq API key (get one free at https://console.groq.com)
+    DATABASE_URL    → Path to the SQLite DB file (e.g., file:./prisma/dev.db)
+    PORT            → (Optional) Port for the backend server; defaults to 3000
+
+--------------------------------------------------------------------------------
+9. HOW TO RUN THE PROJECT
+--------------------------------------------------------------------------------
+
+  BACKEND:
+    cd backend
+    npm install
+    npx prisma generate
+    npx prisma db push
+    npm run dev
+    → Server starts at http://localhost:3000
+
+  FRONTEND:
+    cd frontend
+    npm install
+    npm run dev
+    → UI starts at http://localhost:5173
+
+  Open http://localhost:5173 in your browser and start generating websites!
+
+--------------------------------------------------------------------------------
+10. SUMMARY
+--------------------------------------------------------------------------------
+
+WebForge AI is a modern, full-stack AI application that demonstrates:
+  • LLM-powered code generation using Groq + LLaMA 3.3 70B
+  • Clean React architecture with smooth animated state transitions
+  • A robust REST API built with Express + TypeScript
+  • Persistent project storage with Prisma + SQLite
+  • Live in-browser preview of AI-generated HTML/CSS/JS via iframes
+  • ZIP download of generated projects using streaming archives
+  • Premium, production-quality UI design with TailwindCSS + Framer Motion
+
+The project is designed to be fast, easy to run locally, and extensible —
+you can swap the AI model, add user authentication, or deploy it to the cloud
+with minimal changes.
+
+================================================================================
+                             END OF DOCUMENT
+================================================================================
