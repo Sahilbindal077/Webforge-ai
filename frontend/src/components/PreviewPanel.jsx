@@ -101,7 +101,12 @@ export default function PreviewPanel({ files, projectId }) {
             <RotateCcw size={18} />
           </button>
           <button
-            onClick={() => { if (projectId) window.location.href = `http://localhost:3000/api/projects/${projectId}/download`; }}
+            onClick={() => { 
+              if (projectId) {
+                const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                window.location.href = `${API_BASE}/api/projects/${projectId}/download`; 
+              }
+            }}
             title="Download"
             className="hover:text-indigo-500 transition-colors"
           >
