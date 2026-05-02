@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: webforge-ai-backend
+    env: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        value: file:/data/sqlite.db
+      - key: GEMINI_API_KEY
+        sync: false # Set this manually in Render dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false # Set this manually in Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false # Set this manually in Render dashboard
+    disk:
+      name: webforge-db
+      mountPath: /data
+      sizeGB: 1
